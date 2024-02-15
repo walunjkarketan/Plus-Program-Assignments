@@ -10,22 +10,80 @@
 class CustomPromise {
   constructor(executor) {
     // Your code here
+    this.state = 'pending';
+    this.value = undefined;
+    this.reason = undefined;
+    this.onFulfilledCallbacks = [];
+    this.onRejectedCallbacks = [];
+
+    const resolve = (value) => {
+      if (this.state === 'pending') {
+        this.state = 'fulfilled';
+        this.value = value;
+        this.onFulfilledCallbacks.forEach((callback) => callback(value));
+      }
+    };
+
+    const reject = (reason) => {
+      if (this.state === 'pending') {
+        this.state = 'rejected';
+        this.reason = reason;
+        this.onRejectedCallbacks.forEach((callback) => callback(reason));
+      }
+    };
+
+    try {
+      executor(resolve, reject);
+    } catch (error) {
+      reject(error);
+    }
   }
 
   then(onFulfilled, onRejected) {
     // Your code here
+    return new CustomPromise((resolve, reject) => {
+      const handleFulfillment = (value) => {
+        try {
+          const result = onFulfilled ? onFulfilled(value) : value;
+          resolve(result);
+        } catch (error) {
+          reject(error);
+        }
+      };
+
+      const handleRejection = (reason) => {
+        try {
+          const result = onRejected ? onRejected(reason) : reason;
+          resolve(result);
+        } catch (error) {
+          reject(error);
+        }
+      };
+
+      if (this.state === 'fulfilled') {
+        setTimeout(() => handleFulfillment(this.value), 0);
+      } else if (this.state === 'rejected') {
+        setTimeout(() => handleRejection(this.reason), 0);
+      } else {
+        this.onFulfilledCallbacks.push(handleFulfillment);
+        this.onRejectedCallbacks.push(handleRejection);
+      }
+    });
   }
 
   catch(onRejected) {
     // Your code here
+    return this.then(null, onRejected);
   }
 
   static resolve(value) {
     // Your code here
+    return new CustomPromise((resolve) => resolve(value));
   }
 
   static reject(reason) {
     // Your code here
+    return new CustomPromise((resolve, reject) => reject(reason));
   }
 }
 
@@ -68,3 +126,13 @@ const myPromise = new CustomPromise((resolve, reject) => {
 // myPromise.catch((error) => {
 //   console.error(error); // Output: Error!
 // });
+
+
+myPromise
+  .then((result) => {
+    console.log(result); // Output: Success!
+  })
+  .catch((error) => {
+    console.error(error);
+  });
+
